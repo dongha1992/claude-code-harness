@@ -1,0 +1,22 @@
+{
+  "$comment": "이 파일을 harness.config.json으로 복사한 뒤 프로젝트에 맞게 수정하세요.",
+  "srcDir": "src",
+  "testDir": "src",
+  "testRunner": "npx vitest run",
+  "testClientDir": ".",
+  "lintCommand": "npm run lint",
+  "tscCommand": "npx tsc --noEmit",
+  "lintDetectPattern": "(npm run lint|pnpm lint|yarn lint)",
+  "tscDetectPattern": "(tsc\\s+--noEmit|npx\\s+tsc\\s+--noEmit)",
+  "testFilePatterns": [
+    "{dir}/__tests__/{name}.test.ts",
+    "{dir}/__tests__/{name}.test.tsx",
+    "{dir}/{name}.test.ts",
+    "{dir}/{name}.test.tsx"
+  ],
+  "sourceExtensions": ["ts", "tsx"],
+  "policyPatterns": "",
+  "protectedPaths": [".env"],
+  "progressFile": "progress.md",
+  "trackDirs": ["src"]
+}

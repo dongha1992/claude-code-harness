@@ -1,0 +1,9 @@
+node_modules/
+.claude/logs/
+.claude/hooks/state/
+.claude/hooks/*.log
+.claude/plans/
+.claude/harness.config.json
+.claude/settings.local.json
+.checkpoint/
+progress.md
