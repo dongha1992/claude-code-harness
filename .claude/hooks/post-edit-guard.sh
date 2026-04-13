@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-INPUT=$(cat)
+source "$(dirname "$0")/parse-json.sh"
 
 STATE_DIR=".claude/hooks/state"
 LOG_FILE="$STATE_DIR/edit-history.log"
 mkdir -p "$STATE_DIR"
 
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""')
+FILE_PATH=$(parse_json "tool_input.file_path")
 
 if [[ -z "$FILE_PATH" ]]; then
   exit 0

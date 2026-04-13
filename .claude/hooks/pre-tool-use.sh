@@ -2,11 +2,6 @@
 # =============================================================================
 # Pre-Tool-Use 훅: 위험한 도구 사용을 실행 전에 차단
 # =============================================================================
-# 동작 방식:
-#   - stdin으로 JSON 수신: { "tool_name": "...", "tool_input": { ... } }
-#   - exit 0 → 도구 실행 허용
-#   - exit 2 → 도구 실행 차단 (stdout 내용이 Claude에게 피드백됨)
-# =============================================================================
 
 set -euo pipefail
 
@@ -14,8 +9,7 @@ source "$(dirname "$0")/load-config.sh"
 
 LOG_FILE=".claude/hooks/guardrails.log"
 
-INPUT_DATA=$(cat)
-TOOL_NAME=$(echo "$INPUT_DATA" | jq -r '.tool_name // ""')
+TOOL_NAME=$(parse_json "tool_name")
 
 timestamp() {
   date '+%Y-%m-%d %H:%M:%S'
@@ -25,7 +19,7 @@ log_event() {
   local level="$1"
   local message="$2"
   mkdir -p "$(dirname "$LOG_FILE")"
-  echo "[$(timestamp)] $level | tool=$TOOL_NAME | message=$message | input=$(echo "$INPUT_DATA" | jq -c '.')" >> "$LOG_FILE"
+  echo "[$(timestamp)] $level | tool=$TOOL_NAME | message=$message | input=$(parse_json_raw)" >> "$LOG_FILE"
 }
 
 block() {
@@ -48,9 +42,9 @@ require_approval() {
   exit 2
 }
 
-# ── Bash 명령어 차단 ──────────────────────────────────────────────────────────
+# ── Bash 명령어 차단 ──
 if [[ "$TOOL_NAME" == "Bash" ]]; then
-  COMMAND=$(echo "$INPUT_DATA" | jq -r '.tool_input.command // ""')
+  COMMAND=$(parse_json "tool_input.command")
 
   # 규칙 1: rm + 보호 경로 조합 차단
   if echo "$COMMAND" | grep -qE "^rm\s|[;&|]\s*rm\s"; then
@@ -101,7 +95,7 @@ if [[ "$TOOL_NAME" == "Bash" ]]; then
 
       if [[ -n "$TS_CHANGES" ]]; then
         if [[ ! -f "$LINT_OK_FILE" ]]; then
-          msg="[commit-guard] git commit 차단: ESLint 미실행\n\n소스 파일을 수정했지만 lint를 실행하지 않았습니다.\n먼저 실행하세요: $CFG_LINT_COMMAND"
+          msg="[commit-guard] git commit 차단: lint 미실행\n\n소스 파일을 수정했지만 lint를 실행하지 않았습니다.\n먼저 실행하세요: $CFG_LINT_COMMAND"
           echo -e "$msg"
           echo -e "$msg" >&2
           exit 2
@@ -117,9 +111,9 @@ if [[ "$TOOL_NAME" == "Bash" ]]; then
   fi
 fi
 
-# ── Write / Edit 보호 파일 차단 ───────────────────────────────────────────────
+# ── Write / Edit 보호 파일 차단 ──
 if [[ "$TOOL_NAME" == "Write" || "$TOOL_NAME" == "Edit" ]]; then
-  FILE_PATH=$(echo "$INPUT_DATA" | jq -r '.tool_input.file_path // ""')
+  FILE_PATH=$(parse_json "tool_input.file_path")
 
   for protected in "${CFG_PROTECTED_PATHS[@]}"; do
     if echo "$FILE_PATH" | grep -qF "$protected"; then

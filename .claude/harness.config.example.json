@@ -14,9 +14,17 @@
     "{dir}/{name}.test.ts",
     "{dir}/{name}.test.tsx"
   ],
-  "sourceExtensions": ["ts", "tsx"],
+  "sourceExtensions": [
+    "ts",
+    "tsx"
+  ],
   "policyPatterns": "",
-  "protectedPaths": [".env"],
+  "protectedPaths": [
+    ".env"
+  ],
   "progressFile": "progress.md",
-  "trackDirs": ["src"]
+  "trackDirs": [
+    "src"
+  ],
+  "testRunnerArgs": "--reporter=verbose"
 }
