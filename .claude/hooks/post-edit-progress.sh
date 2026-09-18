@@ -4,20 +4,12 @@ set -euo pipefail
 source "$(dirname "$0")/load-config.sh"
 
 FILE_PATH=$(parse_json "tool_input.file_path")
-TOOL_NAME=$(parse_json "tool_name")
-
-PROGRESS_FILE="$REPO_ROOT/$CFG_PROGRESS_FILE"
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
 if [[ -z "$FILE_PATH" ]]; then
   exit 0
 fi
 
 RELATIVE_PATH="${FILE_PATH#$REPO_ROOT/}"
-
-if [[ "$FILE_PATH" == "$PROGRESS_FILE" ]]; then
-  exit 0
-fi
 
 if ! is_tracked_file "$RELATIVE_PATH"; then
   exit 0
@@ -26,20 +18,6 @@ fi
 if is_test_file "$RELATIVE_PATH"; then
   exit 0
 fi
-
-if [[ ! -f "$PROGRESS_FILE" ]]; then
-  cat > "$PROGRESS_FILE" <<EOF
-# Progress
-
-## 자동 기록
-
-EOF
-fi
-
-{
-  echo ""
-  echo "- [$TIMESTAMP] tool=$TOOL_NAME | file=$RELATIVE_PATH"
-} >> "$PROGRESS_FILE"
 
 SESSION_FILE="$REPO_ROOT/.claude/hooks/state/session-files.txt"
 mkdir -p "$REPO_ROOT/.claude/hooks/state"

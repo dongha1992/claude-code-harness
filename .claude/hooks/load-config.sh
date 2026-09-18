@@ -66,3 +66,42 @@ is_test_file() {
 is_tracked_file() {
   [[ -n "$CFG_TRACK_DIRS" ]] && echo "$1" | grep -qE "$CFG_TRACK_DIRS"
 }
+
+# 오늘 세션에서 테스트 파일이 아닌 소스 파일이 변경됐는지 확인
+# Usage: has_source_changes_today
+# Return: 0 = 변경 있음, 1 = 변경 없음(세션 파일 없음/오늘 세션 아님 포함)
+has_source_changes_today() {
+  local session_file="$REPO_ROOT/.claude/hooks/state/session-files.txt"
+  [[ -f "$session_file" ]] || return 1
+
+  local today file_date
+  today=$(date '+%Y-%m-%d')
+  file_date=$(date -r "$session_file" '+%Y-%m-%d' 2>/dev/null || echo "")
+  [[ "$file_date" == "$today" ]] || return 1
+
+  local ts_changes
+  ts_changes=$(grep -E "\.(${CFG_SOURCE_EXTS})$" "$session_file" 2>/dev/null \
+    | grep -v '\.test\.\(ts\|tsx\)$' \
+    | grep -v '__tests__' \
+    | head -1 || true)
+  [[ -n "$ts_changes" ]]
+}
+
+# 이번 세션에서 소스 파일이 수정됐는데 lint/tsc 게이트를 통과하지 않았는지 확인
+# Usage: check_quality_gates
+# Sets: GATE_MISSING (공백 구분 "lint"/"tsc" 조합, 문제 없으면 빈 문자열)
+# Return: 0 = 소스 변경 없음 또는 게이트 통과, 1 = 게이트 미통과
+check_quality_gates() {
+  GATE_MISSING=""
+
+  has_source_changes_today || return 0
+
+  local lint_ok_file="$REPO_ROOT/.claude/hooks/state/lint-ok"
+  local tsc_ok_file="$REPO_ROOT/.claude/hooks/state/tsc-ok"
+
+  [[ -f "$lint_ok_file" ]] || GATE_MISSING="lint"
+  [[ -f "$tsc_ok_file" ]]  || GATE_MISSING="$GATE_MISSING${GATE_MISSING:+ }tsc"
+
+  [[ -z "$GATE_MISSING" ]] && return 0
+  return 1
+}

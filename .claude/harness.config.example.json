@@ -18,11 +18,9 @@
     "ts",
     "tsx"
   ],
-  "policyPatterns": "",
   "protectedPaths": [
     ".env"
   ],
-  "progressFile": "progress.md",
   "trackDirs": [
     "src"
   ],

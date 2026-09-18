@@ -78,6 +78,36 @@ if (/^##\s*Status:\s*done/im.test(latestPlan)) {
   process.exit(2);
 }
 
+// "테스트 포함 여부"가 계획에 명시적으로 답변됐는지 확인 (질문 누락/스킵 방지)
+// 헤딩은 반드시 자기 줄 전체를 차지해야 매칭됨 — 본문 중간에 예시로 언급된 경우와 구분하기 위함
+const testHeadingRegex = /^###\s*테스트\s*포함\s*여부\s*$/im;
+const testHeadingMatch = testHeadingRegex.exec(latestPlan);
+if (!testHeadingMatch) {
+  const msg = [
+    `[scope-guard] 계획(${planFiles.at(-1)})에 "### 테스트 포함 여부" 섹션이 없습니다.`,
+    '/plan을 다시 실행해 테스트 코드 포함 여부를 먼저 결정하세요.',
+  ].join('\n');
+  process.stdout.write(msg + '\n');
+  process.stderr.write(msg + '\n');
+  process.exit(2);
+}
+
+const afterHeading = latestPlan.slice(testHeadingMatch.index + testHeadingMatch[0].length);
+const testSectionBlock = afterHeading.split(/\n###/)[0];
+const testValueMatch = testSectionBlock.match(/포함\s*[:：]\s*([^\n]+)/i);
+const testValue = (testValueMatch ? testValueMatch[1] : '').trim();
+const testAnswered = /^(yes|no|y|n|포함|미포함)$/i.test(testValue);
+
+if (!testAnswered) {
+  const msg = [
+    `[scope-guard] 계획(${planFiles.at(-1)})의 "테스트 포함 여부"가 아직 결정되지 않았습니다.`,
+    '"### 테스트 포함 여부" 아래 "- 포함: YES" 또는 "- 포함: NO"로 명확히 답한 뒤 다시 시도하세요.',
+  ].join('\n');
+  process.stdout.write(msg + '\n');
+  process.stderr.write(msg + '\n');
+  process.exit(2);
+}
+
 // 계획 파일에 현재 파일이 언급됐는지 확인 (suffix 매칭)
 // client/src/, crawler/, mcp/ 등 패키지 prefix와 무관하게 동작한다
 const pathParts = relativePath.split('/');

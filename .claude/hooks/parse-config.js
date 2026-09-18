@@ -32,7 +32,6 @@ const scalars = [
   'srcDir', 'testDir', 'testRunner', 'testRunnerArgs',
   'testClientDir', 'lintCommand', 'tscCommand',
   'lintDetectPattern', 'tscDetectPattern',
-  'policyPatterns', 'progressFile',
 ];
 for (const key of scalars) {
   const envKey = 'CFG_' + key.replace(/[A-Z]/g, c => '_' + c).toUpperCase();

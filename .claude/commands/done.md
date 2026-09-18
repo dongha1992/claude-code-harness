@@ -7,18 +7,7 @@
 2. 각 파일이 원래 작업 범위 안에 있는지 확인한다
 3. 의도하지 않은 변경(스타일값, 무관한 컴포넌트)이 있으면 되돌린다
 
-### Step 2 — 정책 키워드 탐지 (자동)
-
-추론하지 않는다. 아래 명령을 실행한다.
-
-```bash
-bash .claude/hooks/policy-check.sh
-```
-
-- **exit 0** → Gate 5: N/A. Step 3으로.
-- **exit 1** → 탐지된 파일에 테스트 없음. 테스트 작성 후 이 Step 재실행.
-
-### Step 3 — 품질 게이트
+### Step 2 — 품질 게이트
 
 아래 명령을 순서대로 실행한다. 코드를 읽고 추론하지 않는다.
 
@@ -34,12 +23,6 @@ npm run lint
 ```
 에러 있으면 FAIL (워닝은 허용).
 
-**Gate 5 — 테스트 (Step 2에서 exit 1인 경우에만)**
-```bash
-npm test -- --watchAll=false
-```
-실패 테스트 있으면 FAIL.
-
 Gate 3(상태 관리 경계), Gate 4(변경 범위)는 Step 1에서 이미 확인됨.
 
 결과를 출력한다:
@@ -51,7 +34,6 @@ Gate 1 타입 안전성  ✅ / ❌
 Gate 2 코드 품질    ✅ / ❌
 Gate 3 상태 경계    ✅ / ❌  (Step 1 검증 결과)
 Gate 4 변경 범위    ✅ / ❌  (Step 1 검증 결과)
-Gate 5 정책 테스트  ✅ / ❌ / N/A
 
 결과: PASS ✅ / FAIL ❌
 ─────────────────
@@ -59,7 +41,7 @@ Gate 5 정책 테스트  ✅ / ❌ / N/A
 
 FAIL 항목이 있으면 수정 후 재확인. 커밋 불가.
 
-### Step 4 — 계획 파일 완료 마커 추가
+### Step 3 — 계획 파일 완료 마커 추가
 
 `.claude/plans/` 에 활성 계획 파일이 있으면 파일 끝에 아래를 추가한다:
 
@@ -69,7 +51,7 @@ FAIL 항목이 있으면 수정 후 재확인. 커밋 불가.
 
 이 마커가 있으면 scope-guard가 해당 계획을 비활성으로 인식하여 이후 파일 수정을 차단하지 않는다.
 
-### Step 5 — 커밋 메시지 생성
+### Step 4 — 커밋 메시지 생성
 게이트 통과 후 커밋 메시지를 제안한다:
 
 ```
@@ -82,7 +64,7 @@ feat|fix|refactor|style|test|chore: [작업 요약]
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 ```
 
-### Step 6 — 세션 로그 기록
+### Step 5 — 세션 로그 기록
 
 `.claude/logs/` 디렉토리에 `YYYY-MM-DD-HH-MM.md` 형식으로 세션 로그를 저장한다.
 디렉토리가 없으면 생성한다.
@@ -105,13 +87,12 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 - 계획대로 진행됨 / 벗어남 (사유: ...)
 ```
 
-### Step 7 — 최종 요약 출력
+### Step 6 — 최종 요약 출력
 
 ```
 ✅ /done 완료 (자기 검증)
 ─────────────────
 수정 파일 수: N개
-정책 테스트: 확인됨 / 해당 없음
 품질 게이트: PASS
 세션 로그: .claude/logs/YYYY-MM-DD-HH-MM.md
 
@@ -124,4 +105,3 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 커밋은 사용자 확인 후 실행한다. 자동으로 커밋하지 않는다.
 
 ---
-

@@ -82,31 +82,13 @@ if [[ "$TOOL_NAME" == "Bash" ]]; then
 
   # 규칙 7: git commit 전 lint + tsc 게이트 확인
   if echo "$COMMAND" | grep -qE '(^|[;&|[:space:]])git\s+commit([[:space:]]|$)'; then
-    STATE_DIR="$REPO_ROOT/.claude/hooks/state"
-    LINT_OK_FILE="$STATE_DIR/lint-ok"
-    TSC_OK_FILE="$STATE_DIR/tsc-ok"
-    SESSION_FILE="$STATE_DIR/session-files.txt"
-
-    if [[ -f "$SESSION_FILE" ]]; then
-      TS_CHANGES=$(grep -E "\.(${CFG_SOURCE_EXTS})$" "$SESSION_FILE" 2>/dev/null \
-        | grep -v '\.test\.\(ts\|tsx\)$' \
-        | grep -v '__tests__' \
-        | head -1 || true)
-
-      if [[ -n "$TS_CHANGES" ]]; then
-        if [[ ! -f "$LINT_OK_FILE" ]]; then
-          msg="[commit-guard] git commit 차단: lint 미실행\n\n소스 파일을 수정했지만 lint를 실행하지 않았습니다.\n먼저 실행하세요: $CFG_LINT_COMMAND"
-          echo -e "$msg"
-          echo -e "$msg" >&2
-          exit 2
-        fi
-        if [[ ! -f "$TSC_OK_FILE" ]]; then
-          msg="[commit-guard] git commit 차단: tsc 미실행\n\n소스 파일을 수정했지만 tsc를 실행하지 않았습니다.\n먼저 실행하세요: $CFG_TSC_COMMAND"
-          echo -e "$msg"
-          echo -e "$msg" >&2
-          exit 2
-        fi
-      fi
+    if ! check_quality_gates; then
+      msg="[commit-guard] git commit 차단: 게이트 미실행($GATE_MISSING)\n\n소스 파일을 수정했지만 게이트를 통과하지 않았습니다."
+      [[ "$GATE_MISSING" == *lint* ]] && msg="$msg\n  ❌ ESLint  →  $CFG_LINT_COMMAND"
+      [[ "$GATE_MISSING" == *tsc* ]]  && msg="$msg\n  ❌ tsc     →  $CFG_TSC_COMMAND"
+      echo -e "$msg"
+      echo -e "$msg" >&2
+      exit 2
     fi
   fi
 fi

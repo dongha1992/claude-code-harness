@@ -14,8 +14,6 @@ Claude Code의 품질 게이트, 안전 장치, 워크플로우 자동화를 위
 | `lint-tracker.sh` | Bash 후 | lint 실행 감지 → 게이트 통과 기록 |
 | `tsc-tracker.sh` | Bash 후 | tsc 실행 감지 → 게이트 통과 기록 |
 | `stop-done-guard.sh` | Stop 시 | 소스 수정 후 lint/tsc 미실행이면 차단 |
-| `stop-checkpoint.sh` | Stop 시 | 변경 파일 기반 체크포인트 생성 |
-| `policy-check.sh` | Stop 시 | 정책 키워드(날짜계산, 금액 등) 감지 + 테스트 존재 확인 |
 
 ## 빠른 시작
 
@@ -59,7 +57,6 @@ cd your-project && bash .claude/setup.sh
 | `lintCommand` | lint 명령 | `npm run lint` |
 | `tscCommand` | 타입 체크 명령 | `npx tsc --noEmit` |
 | `testFilePatterns` | 테스트 파일 탐색 패턴 | `["{dir}/__tests__/{name}.test.ts", ...]` |
-| `policyPatterns` | 정책 키워드 정규식 (빈 문자열 = 비활성) | `""` |
 | `protectedPaths` | 수정 차단 경로 | `[".env"]` |
 | `trackDirs` | 변경 추적 디렉토리 | `["src"]` |
 
@@ -71,16 +68,6 @@ cd your-project && bash .claude/setup.sh
   "testRunner": "pnpm vitest run",
   "testClientDir": "packages/app",
   "trackDirs": ["packages/app/src", "packages/shared/src"]
-}
-```
-
-### 정책 키워드 예시
-
-금액, 날짜, 권한 관련 로직에 테스트를 강제하려면:
-
-```json
-{
-  "policyPatterns": "addDays|subDays|Math\\.(round|floor|ceil)|isAdmin|\\.price"
 }
 ```
 

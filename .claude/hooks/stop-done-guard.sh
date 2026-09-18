@@ -4,32 +4,8 @@ set -euo pipefail
 
 source "$(dirname "$0")/load-config.sh"
 
-STATE_DIR="$REPO_ROOT/.claude/hooks/state"
-SESSION_FILE="$STATE_DIR/session-files.txt"
-LINT_OK_FILE="$STATE_DIR/lint-ok"
-TSC_OK_FILE="$STATE_DIR/tsc-ok"
-
-# 세션 파일 없으면 통과
-if [[ ! -f "$SESSION_FILE" ]]; then
-  exit 0
-fi
-
-# 오늘 세션인지 확인
-TODAY=$(date '+%Y-%m-%d')
-FILE_DATE=$(date -r "$SESSION_FILE" '+%Y-%m-%d' 2>/dev/null || echo "")
-if [[ "$FILE_DATE" != "$TODAY" ]]; then
-  exit 0
-fi
-
-# 이번 세션에서 수정된 소스 파일 있는지 확인 (테스트 파일 제외)
-TS_CHANGES=$(grep -E "\.(${CFG_SOURCE_EXTS})$" "$SESSION_FILE" 2>/dev/null \
-  | grep -v '\.test\.\(ts\|tsx\)$' \
-  | grep -v '__tests__' \
-  | head -1 || true)
-
-if [[ -z "$TS_CHANGES" ]]; then
-  exit 0
-fi
+# 이번 세션에서 소스 파일 변경이 없으면 통과
+has_source_changes_today || exit 0
 
 # 활성 계획(Status: in-progress) 존재 여부 확인
 PLANS_DIR="$REPO_ROOT/.claude/plans"
@@ -52,20 +28,14 @@ if [[ -n "$ACTIVE_PLAN" ]]; then
   exit 2
 fi
 
-MISSING=""
-[[ ! -f "$LINT_OK_FILE" ]] && MISSING="$MISSING lint"
-[[ ! -f "$TSC_OK_FILE" ]]  && MISSING="$MISSING tsc"
+check_quality_gates && exit 0
 
-if [[ -z "$MISSING" ]]; then
-  exit 0
-fi
-
-echo "[done-guard] 미실행:$MISSING" >&2
+echo "[done-guard] 미실행: $GATE_MISSING" >&2
 echo "" >&2
 echo "이번 세션에서 소스 파일을 수정했지만 게이트를 통과하지 않았습니다." >&2
 echo "" >&2
-[[ ! -f "$LINT_OK_FILE" ]] && echo "  ❌ ESLint  →  $CFG_LINT_COMMAND" >&2
-[[ ! -f "$TSC_OK_FILE" ]]  && echo "  ❌ tsc     →  $CFG_TSC_COMMAND" >&2
+[[ "$GATE_MISSING" == *lint* ]] && echo "  ❌ ESLint  →  $CFG_LINT_COMMAND" >&2
+[[ "$GATE_MISSING" == *tsc* ]]  && echo "  ❌ tsc     →  $CFG_TSC_COMMAND" >&2
 echo "" >&2
 echo "(/done 커맨드를 실행하면 전체 게이트를 자동으로 통과합니다)" >&2
 exit 2
