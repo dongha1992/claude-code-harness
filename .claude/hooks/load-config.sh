@@ -3,7 +3,7 @@
 # Usage: source "$(dirname "$0")/load-config.sh"
 # 의존성: Node.js (jq 불필요)
 
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+REPO_ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 CONFIG_FILE="$REPO_ROOT/.claude/harness.config.json"
 _HOOKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 

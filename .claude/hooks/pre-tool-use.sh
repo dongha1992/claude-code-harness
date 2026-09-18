@@ -7,7 +7,7 @@ set -euo pipefail
 
 source "$(dirname "$0")/load-config.sh"
 
-LOG_FILE=".claude/hooks/guardrails.log"
+LOG_FILE="$REPO_ROOT/.claude/hooks/guardrails.log"
 
 TOOL_NAME=$(parse_json "tool_name")
 

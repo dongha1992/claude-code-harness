@@ -4,6 +4,9 @@ set -euo pipefail
 
 source "$(dirname "$0")/load-config.sh"
 
+# 이미 이 훅 때문에 이어진 턴이면 다시 막지 않음 (무한 Stop 루프 방지)
+[[ "$(parse_json "stop_hook_active")" == "true" ]] && exit 0
+
 # 이번 세션에서 소스 파일 변경이 없으면 통과
 has_source_changes_today || exit 0
 

@@ -3,7 +3,8 @@ set -euo pipefail
 
 source "$(dirname "$0")/parse-json.sh"
 
-STATE_DIR=".claude/hooks/state"
+ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
+STATE_DIR="$ROOT/.claude/hooks/state"
 LOG_FILE="$STATE_DIR/edit-history.log"
 mkdir -p "$STATE_DIR"
 
@@ -25,7 +26,7 @@ if [[ -n "$RECENT_FIVE" ]]; then
 
     if [[ "$LINE_COUNT" -eq 5 && "$UNIQUE_COUNT" -eq 1 ]]; then
         TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-        GUARDRAILS_LOG="$(git rev-parse --show-toplevel 2>/dev/null || pwd)/.claude/hooks/guardrails.log"
+        GUARDRAILS_LOG="$ROOT/.claude/hooks/guardrails.log"
         echo "[$TIMESTAMP] BLOCKED | tool=Edit | message=Doom Loop 감지 — 같은 파일 5회 연속 수정: $FILE_PATH" >> "$GUARDRAILS_LOG"
 
         echo "⚠️ [Doom Loop 감지]" >&2

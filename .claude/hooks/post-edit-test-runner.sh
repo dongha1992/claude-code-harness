@@ -11,7 +11,7 @@ RELATIVE_FILE="${FILE_PATH#$REPO_ROOT/}"
 
 is_test_file "$FILE_PATH" && exit 0
 
-find_test_file "$FILE_PATH"
+find_test_file "$FILE_PATH" || true
 TEST_FILE="$FOUND_TEST_FILE"
 
 [[ -z "$TEST_FILE" ]] && exit 0
