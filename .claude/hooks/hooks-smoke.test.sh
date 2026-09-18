@@ -55,4 +55,24 @@ printf '// solution style\n{ "files": [], "references": [ { "path": "./tsconfig.
 [[ "$(tsc_cmd auto)" == "npx tsc -b" ]] || fail "references 구조면 npx tsc -b여야 함 (--noEmit은 아무것도 검사 안 함)"
 [[ "$(tsc_cmd 'pnpm typecheck')" == "pnpm typecheck" ]] || fail "직접 지정한 tscCommand가 우선해야 함"
 
-echo "✅ hooks-smoke: 5개 시나리오 모두 통과"
+# 6) 게이트를 통과했어도 "## Status: done" 없는 계획이 있으면 Stop을 막는다 (scope-guard와 같은 규칙)
+touch "$T/.claude/hooks/state/lint-ok" "$T/.claude/hooks/state/tsc-ok"
+mkdir -p "$T/.claude/plans"
+printf '# plan\n' > "$T/.claude/plans/a.md"
+(cd "$T" && printf '{}' | bash .claude/hooks/stop-done-guard.sh >/dev/null 2>&1)
+expect_code 2 "done 마커 없는 계획이 있으면 Stop을 막아야 함" $?
+printf '\n## Status: done\n' >> "$T/.claude/plans/a.md"
+(cd "$T" && printf '{}' | bash .claude/hooks/stop-done-guard.sh >/dev/null 2>&1)
+expect_code 0 "모든 계획이 done이고 게이트 통과면 Stop을 허용해야 함" $?
+
+# 7) 테스트 실패 시 tested-ok.txt에서 해당 파일을 지운다 (마지막 한 줄이어도 비정상 종료·잔여 .tmp 없이)
+node -e 'const f=process.argv[1],c=JSON.parse(require("fs").readFileSync(f));c.testRunner="false";c.testRunnerArgs="";require("fs").writeFileSync(f,JSON.stringify(c))' "$T/.claude/harness.config.json"
+printf 'it("x",()=>{});\n' > "$T/src/foo.test.ts"
+printf 'src/foo.ts\n' > "$T/.claude/hooks/state/tested-ok.txt"
+(cd "$T" && printf '{"tool_name":"Edit","tool_input":{"file_path":"%s/src/foo.ts"}}' "$T" \
+  | bash .claude/hooks/post-edit-test-runner.sh >/dev/null 2>&1)
+expect_code 2 "테스트 실패면 exit 2여야 함" $?
+grep -q "src/foo.ts" "$T/.claude/hooks/state/tested-ok.txt" && fail "실패한 파일이 tested-ok.txt에 남아있음"
+[[ -e "$T/.claude/hooks/state/tested-ok.txt.tmp" ]] && fail "빈 .tmp 파일이 남아있음"
+
+echo "✅ hooks-smoke: 7개 시나리오 모두 통과"

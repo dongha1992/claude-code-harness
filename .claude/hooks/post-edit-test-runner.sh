@@ -33,7 +33,7 @@ if eval "$RUNNER_CMD" 2>&1; then
 else
   echo "❌ 테스트 실패 — 수정 필요" >&2
   if [[ -f "$TESTED_OK_FILE" ]]; then
-    grep -vxF "$RELATIVE_FILE" "$TESTED_OK_FILE" > "$TESTED_OK_FILE.tmp" && mv "$TESTED_OK_FILE.tmp" "$TESTED_OK_FILE"
+    { grep -vxF "$RELATIVE_FILE" "$TESTED_OK_FILE" || true; } > "$TESTED_OK_FILE.tmp" && mv "$TESTED_OK_FILE.tmp" "$TESTED_OK_FILE"
   fi
   exit 2
 fi

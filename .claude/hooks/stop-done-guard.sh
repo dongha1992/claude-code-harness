@@ -10,17 +10,16 @@ source "$(dirname "$0")/load-config.sh"
 # 이번 세션에서 소스 파일 변경이 없으면 통과
 has_source_changes_today || exit 0
 
-# 활성 계획(Status: in-progress) 존재 여부 확인
+# 활성 계획 확인 — scope-guard.js와 같은 규칙: "## Status: done" 없는 계획 중 mtime 최신
 PLANS_DIR="$REPO_ROOT/.claude/plans"
 ACTIVE_PLAN=""
 if [[ -d "$PLANS_DIR" ]]; then
-  for f in "$PLANS_DIR"/*.md; do
-    [[ -f "$f" ]] || continue
-    if grep -q "Status: in-progress" "$f" 2>/dev/null; then
+  while IFS= read -r f; do
+    if ! grep -qiE '^##[[:space:]]*Status:[[:space:]]*done' "$f" 2>/dev/null; then
       ACTIVE_PLAN=$(basename "$f")
       break
     fi
-  done
+  done < <(ls -t "$PLANS_DIR"/*.md 2>/dev/null || true)
 fi
 
 if [[ -n "$ACTIVE_PLAN" ]]; then
