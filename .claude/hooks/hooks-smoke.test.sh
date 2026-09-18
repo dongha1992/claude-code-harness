@@ -42,4 +42,17 @@ expect_code 0 "stop_hook_active면 통과해야 함 (무한 루프 방지)" $?
 (cd "$T/.claude/hooks" && printf '{}' | CLAUDE_PROJECT_DIR="$T" bash "$T/.claude/hooks/stop-done-guard.sh" >/dev/null 2>&1)
 expect_code 2 "비루트 cwd에서도 CLAUDE_PROJECT_DIR 기준으로 상태를 읽어야 함" $?
 
-echo "✅ hooks-smoke: 4개 시나리오 모두 통과"
+# 5) tscCommand=auto는 tsconfig 구조를 보고 결정한다 (references면 tsc -b, 아니면 --noEmit, 직접 지정 값이 우선)
+tsc_cmd() { # tsc_cmd <tscCommand 설정값>
+  node -e 'const c=require(process.argv[1]);c.tscCommand=process.argv[2];c.testClientDir=".";require("fs").writeFileSync(process.argv[3],JSON.stringify(c))' \
+    "$T/.claude/harness.config.example.json" "$1" "$T/.claude/case.config.json"
+  node "$T/.claude/hooks/parse-config.js" "$T/.claude/case.config.json" tscCommand
+}
+[[ "$(tsc_cmd auto)" == "npx tsc --noEmit" ]] || fail "tsconfig 없으면 npx tsc --noEmit이어야 함"
+printf '{ "compilerOptions": {} }\n' > "$T/tsconfig.json"
+[[ "$(tsc_cmd auto)" == "npx tsc --noEmit" ]] || fail "references 없는 tsconfig는 npx tsc --noEmit이어야 함"
+printf '// solution style\n{ "files": [], "references": [ { "path": "./tsconfig.app.json" } ] }\n' > "$T/tsconfig.json"
+[[ "$(tsc_cmd auto)" == "npx tsc -b" ]] || fail "references 구조면 npx tsc -b여야 함 (--noEmit은 아무것도 검사 안 함)"
+[[ "$(tsc_cmd 'pnpm typecheck')" == "pnpm typecheck" ]] || fail "직접 지정한 tscCommand가 우선해야 함"
+
+echo "✅ hooks-smoke: 5개 시나리오 모두 통과"

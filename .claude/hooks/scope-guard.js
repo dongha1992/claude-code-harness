@@ -7,7 +7,8 @@
  *
  * 동작 원칙:
  * - .claude/ 내부 수정은 항상 허용 (계획 파일 저장 등)
- * - 활성 계획 파일이 없으면 제한 없음 (LOW 작업)
+ * - 활성 계획 = "## Status: done" 마커가 없는 계획 중 mtime이 가장 최근인 것
+ * - 계획 파일이 없거나 전부 done이면 차단 (/plan 먼저)
  * - 계획에 없는 파일은 src/ 포함 전부 차단 (exit 2)
  */
 
@@ -32,7 +33,7 @@ if (!['Edit', 'Write'].includes(toolName)) process.exit(0);
 const targetFile  = toolInput.file_path ?? '';
 if (!targetFile) process.exit(0);
 
-// 스크립트 위치(tulip/.claude/hooks/) 기준으로 repo root 결정
+// 스크립트 위치(.claude/hooks/) 기준으로 repo root 결정
 // → cwd가 client/ 등 하위 디렉토리여도 올바른 경로를 참조한다
 const projectRoot = path.join(__dirname, '../..');
 // OS 무관하게 슬래시로 정규화
@@ -62,21 +63,22 @@ if (planFiles.length === 0) {
   process.exit(2);
 }
 
-const latestPlanPath = path.join(plansDir, planFiles.at(-1));
-let latestPlan = '';
-try {
-  latestPlan = fs.readFileSync(latestPlanPath, 'utf8');
-} catch (_) {
-  process.exit(0);
-}
+// done 계획을 먼저 제외한 뒤 mtime 최신을 고른다.
+// (옛 계획에 done 마커를 붙이면 mtime이 갱신돼 새 계획을 가리는 문제 방지)
+const readPlan = f => {
+  try { return fs.readFileSync(path.join(plansDir, f), 'utf8'); } catch (_) { return ''; }
+};
+const activePlans = planFiles.filter(f => !/^##\s*Status:\s*done/im.test(readPlan(f)));
 
-// 완료된 계획 → 차단 (새 /plan 요구)
-if (/^##\s*Status:\s*done/im.test(latestPlan)) {
-  const msg = `[scope-guard] 최신 계획(${planFiles.at(-1)})이 완료 상태입니다. 새 /plan을 먼저 실행하세요.`;
+if (activePlans.length === 0) {
+  const msg = `[scope-guard] 모든 계획이 완료 상태입니다(최신: ${planFiles.at(-1)}). 새 /plan을 먼저 실행하세요.`;
   process.stdout.write(msg + '\n');
   process.stderr.write(msg + '\n');
   process.exit(2);
 }
+
+const activePlanName = activePlans.at(-1);
+const latestPlan = readPlan(activePlanName);
 
 // "테스트 포함 여부"가 계획에 명시적으로 답변됐는지 확인 (질문 누락/스킵 방지)
 // 헤딩은 반드시 자기 줄 전체를 차지해야 매칭됨 — 본문 중간에 예시로 언급된 경우와 구분하기 위함
@@ -84,7 +86,7 @@ const testHeadingRegex = /^###\s*테스트\s*포함\s*여부\s*$/im;
 const testHeadingMatch = testHeadingRegex.exec(latestPlan);
 if (!testHeadingMatch) {
   const msg = [
-    `[scope-guard] 계획(${planFiles.at(-1)})에 "### 테스트 포함 여부" 섹션이 없습니다.`,
+    `[scope-guard] 계획(${activePlanName})에 "### 테스트 포함 여부" 섹션이 없습니다.`,
     '/plan을 다시 실행해 테스트 코드 포함 여부를 먼저 결정하세요.',
   ].join('\n');
   process.stdout.write(msg + '\n');
@@ -100,7 +102,7 @@ const testAnswered = /^(yes|no|y|n|포함|미포함)$/i.test(testValue);
 
 if (!testAnswered) {
   const msg = [
-    `[scope-guard] 계획(${planFiles.at(-1)})의 "테스트 포함 여부"가 아직 결정되지 않았습니다.`,
+    `[scope-guard] 계획(${activePlanName})의 "테스트 포함 여부"가 아직 결정되지 않았습니다.`,
     '"### 테스트 포함 여부" 아래 "- 포함: YES" 또는 "- 포함: NO"로 명확히 답한 뒤 다시 시도하세요.',
   ].join('\n');
   process.stdout.write(msg + '\n');
@@ -120,7 +122,7 @@ if (isInPlan) process.exit(0);
 // 계획에 없는 파일 — 경로 무관하게 전부 차단
 const message = [
   `[scope-guard] 계획에 없는 파일 수정 시도: ${relativePath}`,
-  `활성 계획: ${planFiles.at(-1)}`,
+  `활성 계획: ${activePlanName}`,
   '계획 파일의 "구현 순서"에 이 파일을 추가하거나, /plan을 먼저 실행하세요.',
 ].join('\n');
 

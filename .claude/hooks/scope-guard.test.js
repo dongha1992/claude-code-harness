@@ -15,6 +15,7 @@ const SCOPE_GUARD = path.join(HOOKS_DIR, 'scope-guard.js');
 const REPO_ROOT = path.join(HOOKS_DIR, '../..');
 const TARGET_FILE = path.join(REPO_ROOT, 'src/zz-scope-guard-test-target.ts');
 const TEST_PLAN_PATH = path.join(PLANS_DIR, 'zz-scope-guard-selftest.md');
+const ACTIVE_PLAN_PATH = path.join(PLANS_DIR, 'zz-scope-guard-selftest-active.md');
 
 function runScopeGuard(planBody) {
   fs.mkdirSync(PLANS_DIR, { recursive: true });
@@ -31,7 +32,9 @@ function runScopeGuard(planBody) {
 }
 
 function cleanup() {
-  if (fs.existsSync(TEST_PLAN_PATH)) fs.unlinkSync(TEST_PLAN_PATH);
+  for (const p of [TEST_PLAN_PATH, ACTIVE_PLAN_PATH]) {
+    if (fs.existsSync(p)) fs.unlinkSync(p);
+  }
 }
 
 try {
@@ -82,7 +85,22 @@ try {
 `);
   assert.strictEqual(result.status, 0, '본문 중 헤딩 예시 언급이 있어도 실제 헤딩의 답변으로 판단해야 함');
 
-  console.log('✅ scope-guard 테스트 포함 여부 체크 5개 시나리오 모두 통과');
+  // 시나리오 6: 옛 계획이 나중에 done 처리돼 mtime이 가장 최신이어도
+  // 미완료 계획이 활성으로 선택돼야 함 (done 마커가 새 계획을 가리던 회귀 케이스)
+  fs.writeFileSync(ACTIVE_PLAN_PATH, `## 구현 계획: 새 계획
+### 테스트 포함 여부
+- 포함: NO
+### 구현 순서
+1. src/zz-scope-guard-test-target.ts — 작업
+`);
+  const mid = new Date(Date.now() + 30_000);
+  fs.utimesSync(ACTIVE_PLAN_PATH, mid, mid);
+  result = runScopeGuard(`## 구현 계획: 옛 계획
+## Status: done
+`);
+  assert.strictEqual(result.status, 0, 'mtime이 최신인 done 계획이 미완료 계획을 가리면 안 됨');
+
+  console.log('✅ scope-guard 6개 시나리오 모두 통과');
 } finally {
   cleanup();
 }

@@ -11,17 +11,19 @@
 
 아래 명령을 순서대로 실행한다. 코드를 읽고 추론하지 않는다.
 
+명령은 하드코딩하지 말고 아래 명령이 출력하는 값을 그대로 실행한다. (tsc는 tsconfig 구조에 따라 `tsc -b` 또는 `tsc --noEmit`으로 자동 결정된다)
+
 **Gate 1 — TypeScript**
 ```bash
-npx tsc --noEmit
+node .claude/hooks/parse-config.js .claude/harness.config.json tscCommand
 ```
-에러 있으면 FAIL. 수정 후 재실행.
+출력된 명령을 실행한다. 에러 있으면 FAIL. 수정 후 재실행.
 
 **Gate 2 — ESLint**
 ```bash
-npm run lint
+node .claude/hooks/parse-config.js .claude/harness.config.json lintCommand
 ```
-에러 있으면 FAIL (워닝은 허용).
+출력된 명령을 실행한다. 에러 있으면 FAIL (워닝은 허용).
 
 Gate 3(상태 관리 경계), Gate 4(변경 범위)는 Step 1에서 이미 확인됨.
 
